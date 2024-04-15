@@ -1,2 +1,3 @@
-# assembler-arqui
-# assembler-arqui
+# Códigos propios
+## Repositorio con tareas propias
+- T2 InfoVis
