@@ -31,6 +31,20 @@ const MARGIN = {
 const contenedorVis1 = SVG1
 	.append("g")
 
+const contenedorVis2 = SVG2
+	.append("g")
+
+// Tooltip
+let tooltip = d3.select("body").append("div")
+	.style("opacity", 0)
+	.style("width", 200)
+	.style("height", 50)
+	.style("pointer-events", "none")
+	.style("background", "rgb(117, 168, 234)")
+	.style("border-radius", "8px")
+	.style("padding", "4px")
+	.style("position", "absolute");
+
 crearSeries();
 
 function crearSeries() {
@@ -39,16 +53,10 @@ function crearSeries() {
 	la primera visualización.
 	En esta visualización están las 3 series que deben ser dibujadas aplicando data-join 
 	*/
-	const series = d3.csv(SERIES_URL, d3.autoType).then(series => {
+	d3.csv(SERIES_URL, d3.autoType).then(series => {
 
 		const datos_agrupados = d3.groups(series, d => d.serie)
 		console.log(datos_agrupados)
-
-		// Posición horizontal de los rectángulos
-		// const escalaX = d3.scaleBand()
-		//   .domain(datos_agrupados.map(d => d[0]))
-		// 	.range([0, WIDTH_VIS_1])
-		// 	.padding(1);
 
 		// Mapeo de "personajes_extra" a alturas 
 		const alturaRects1 = d3.scaleLinear()
@@ -73,7 +81,7 @@ function crearSeries() {
 			.domain([0, 1, 2]) // Índices para los tres rectángulos en cada grupo
 			.range(["#fad763", "#db4f4b", "#8dff83"]); // Colores para cada rectángulo
 
-		const rectangulos = contenedorVis1
+		let rectangulos = contenedorVis1
 			.selectAll("g.group")
 			.data(datos_agrupados)
 			.join(enter => {
@@ -94,6 +102,19 @@ function crearSeries() {
 					.attr("id", d => `rect-${d[0].slice(-1)}`)
 					.attr("transform", "rotate(180)");
 
+				// Tejuelo
+				rect_group
+					.append("rect")
+					.attr("x", (d, i) => -(100 + i * (200)))
+					.attr("y", d => -220 + alturaRects1(d[1][0].personajes_extras)) // -220 + altura del rectangulo original
+					.attr("width", 50)
+					.attr("height", 10) // altura varía según personajes_extras
+					.attr("fill", "#2644f3") // verde si es que hay manga y rojo si es que no hay manga
+					.attr("stroke", "black")
+					.attr("stroke-width", 2)
+					.attr("id", d => `rect-${d[0].slice(-1)}`)
+					.attr("transform", "rotate(180)");
+
 				// Rectángulos centrales
 				rect_group
 					.append("rect")
@@ -102,6 +123,19 @@ function crearSeries() {
 					.attr("width", d => anchoRects2(d[1][0].aventuras)) // Ancho varía según aventuras
 					.attr("height", 120)
 					.attr("fill", d => colorRects2(d[1][0].cantidad_caps)) // Color varía según cantidad de capítulos
+					.attr("stroke", "black")
+					.attr("stroke-width", 2)
+					.attr("id", d => `rect-${d[0].slice(-1)}`)
+					.attr("transform", "rotate(180)");
+
+				// Tejuelo
+				rect_group
+					.append("rect")
+					.attr("x", (d, i) => -(100 + anchoRects2(d[1][0].aventuras) + i * (200)))
+					.attr("y", -220 + 120) // -220 + altura del rectangulo original
+					.attr("width", d => anchoRects2(d[1][0].aventuras)) // Ancho varía según aventuras
+					.attr("height", 10)
+					.attr("fill", "#2644f3") // Color varía según cantidad de capítulos
 					.attr("stroke", "black")
 					.attr("stroke-width", 2)
 					.attr("id", d => `rect-${d[0].slice(-1)}`)
@@ -120,11 +154,33 @@ function crearSeries() {
 					.attr("id", d => `rect-${d[0].slice(-1)}`)
 					.attr("transform", "rotate(180)");
 
+				// Tejuelo
+				rect_group
+					.append("rect")
+					.attr("x", (d, i) => -(150 + anchoRects2(d[1][0].aventuras) + i * (200)))
+					.attr("y", d => -220 + alturaRects3(d[1][0].personajes_recurrentes))
+					.attr("width", 50) // Ancho varía según aventuras
+					.attr("height", 10)
+					.attr("fill", "#2644f3") // Color varía según cantidad de capítulos
+					.attr("stroke", "black")
+					.attr("stroke-width", 2)
+					.attr("id", d => `rect-${d[0].slice(-1)}`)
+					.attr("transform", "rotate(180)");
+
+				rect_group
+					.append("text")
+					.attr("x", (d, i) => i * 200 + 50)
+					.attr("y", 230)
+					.attr("font-size", "20px")
+					.attr("font-weight", "bold")
+					.attr("fill", (d, i) => colorRects3(i))
+					.text(d => d[0]);
+
 				return rect_group;
 			},
 				update => update,
 				exit => exit
-			)
+			);
 
 		/* 
 		Cada vez que se haga click en un conjunto de libros. Debes llamar a
@@ -136,17 +192,17 @@ function crearSeries() {
 
 		// Función para cuando se hace click en un grupo de rectángulos
 		rectangulos.on("click", (_, dato) => {
-			var serie = dato[0];
-
-			rectangulos.selectAll("g.graph > rect")
-				.transition("opacidad-grupos-aledanos")
-				.duration(500)
-				.style("opacity", 0.2)
+			let serie = dato[0];
 
 			rectangulos.selectAll(`#rect-${serie.slice(-1)}`)
 				.transition("opacidad-grupo-seleccionado")
 				.duration(500)
 				.style("opacity", 1)
+
+			rectangulos.selectAll("g.graph > rect")
+				.transition("opacidad-grupos-aledanos")
+				.duration(500)
+				.style("opacity", 0.2)
 
 			preprocesarPersonajes(serie, false);
 		});
@@ -170,6 +226,7 @@ function crearSeries() {
 					color = "black";
 			}
 
+			// Titulo de la serie
 			d3.select("#detailName")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")  // Esto no es tan bonito pero es para que se vean los colores
@@ -177,6 +234,7 @@ function crearSeries() {
 				.style("padding", "3px")
 				.text(`  ${serie}  `)
 
+			// Capítulos de la serie
 			d3.select("#detailCaps")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")
@@ -184,6 +242,7 @@ function crearSeries() {
 				.style("padding", "3px")
 				.text(`${dato[1][0].cantidad_caps}`)
 
+			// Aventuras de la serie
 			d3.select("#detailAventuras")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")
@@ -191,6 +250,7 @@ function crearSeries() {
 				.style("padding", "3px")
 				.text(`${dato[1][0].aventuras}`)
 
+			// Personajes recurrentes de la serie
 			d3.select("#detailPersRecurrent")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")
@@ -198,6 +258,7 @@ function crearSeries() {
 				.style("padding", "3px")
 				.text(`${dato[1][0].personajes_recurrentes}`)
 
+			// Personajes extras de la serie
 			d3.select("#detailPersExtras")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")
@@ -205,6 +266,7 @@ function crearSeries() {
 				.style("padding", "3px")
 				.text(`${dato[1][0].personajes_extras}`)
 
+			// Es basado en manga o no
 			d3.select("#detailPersManga")
 				.style("color", `${color}`)
 				.style("background-color", "rgba(0, 0, 0, 0.1)")
@@ -214,20 +276,57 @@ function crearSeries() {
 
 		});
 
-
-
-
+		// Cambiar los colores de los span del texto
 		d3.select("#legendMangaTrue").style("background-color", "green");
 		d3.select("#legendMangaFalse").style("background-color", "red");
 		d3.select("#legendDB").style("background-color", "#fad763");
 		d3.select("#legendDBZ").style("background-color", "#8dff83");
 		d3.select("#legendDBGT").style("background-color", "#db4f4b");
 
+		/* Botones */
+		d3.select("#DragonBall").on("click", () => {
+			rectangulos.selectAll(`#rect-l`)
+				.transition("opacidad-grupo-seleccionado")
+				.duration(500)
+				.style("opacity", 1);
 
+			rectangulos.selectAll("g.graph > rect")
+				.transition("opacidad-grupos-aledanos")
+				.duration(500)
+				.style("opacity", 0.2);
 
-	})
+			preprocesarPersonajes("Dragon Ball", false);
+		});
 
-}
+		d3.select("#DragonBallZ").on("click", () => {
+			rectangulos.selectAll(`#rect-Z`)
+				.transition("opacidad-grupo-seleccionado")
+				.duration(500)
+				.style("opacity", 1);
+
+			rectangulos.selectAll("g.graph > rect")
+				.transition("opacidad-grupos-aledanos")
+				.duration(500)
+				.style("opacity", 0.2);
+
+			preprocesarPersonajes("Dragon Ball Z", false);
+		});
+
+		d3.select("#DragonBallGT").on("click", () => {
+			rectangulos.selectAll(`#rect-T`)
+				.transition("opacidad-grupo-seleccionado")
+				.duration(500)
+				.style("opacity", 1);
+
+			rectangulos.selectAll("g.graph > rect")
+				.transition("opacidad-grupos-aledanos")
+				.duration(500)
+				.style("opacity", 0.2);
+
+			preprocesarPersonajes("Dragon Ball GT", false);
+		});
+	});
+};
 
 function crearPersonajes(dataset, serie, filtrar_dataset, ordenar_dataset) {
 	// Actualizo nombre de un H4 para saber qué hacer con el dataset
@@ -249,21 +348,188 @@ function crearPersonajes(dataset, serie, filtrar_dataset, ordenar_dataset) {
 
 	// 1. Filtrar, cuando corresponde, por poder_aumenta > 10
 	// Completar aquí
-	// console.log(filtrar_dataset)
+	//console.log(filtrar_dataset)
 
-
-	// 2. Ordenar, según corresponda, los personajes. Completar aquí
-	// console.log(ordenar_dataset)
-
+	// 2. Ordenar, según corresponda, los personajes: porDefecto, alfabético o poder_aumenta
+	if (ordenar_dataset == "alfabético") {
+		datos = d3.sort(datos, (d) => d.personaje)
+	}
+	else if (ordenar_dataset == "poder_aumenta") {
+		datos = d3.sort(datos, (d) => d.poder_aumenta)
+	}
+	console.log(datos);
 
 	// 3. Confeccionar la visualización 
-	// Todas las escalas deben estar basadas en la información de "datos"
-	// y NO en "dataset".
+	const filas = 5
 
-	// console.log(datos)
-	// No olvides que está prohibido el uso de loop (no son necesarios)
-	// Y debes aplicar correctamente data-join
-	// ¡Mucho éxito 😁 !
+	const largoBrazo = d3.scaleLog()
+		.domain([1, d3.max(datos, (d) => d.poder_minimo)])
+		.range([50, 400]);
+
+	const largoCuerpo = d3.scaleLog()
+		.domain([1, d3.max(datos, (d) => d.poder_promedio)])
+		.range([20, 75]);
+
+	const colorCuerpo = d3.scaleDiverging(d3.interpolatePRGn)
+		.domain([d3.min(datos, d => d.aventuras),
+		d3.median(datos, d => d.aventuras),
+		d3.max(datos, d => d.aventuras)])
+
+	let personajes = contenedorVis2
+		.selectAll("g.personaje")
+		.data(datos)
+		.join(
+			enter => {
+				let personaje = enter.append("g")
+					.attr("class", "personaje")
+					.style("opacity", 0)
+					.attr("transform", (_, i) => {
+						let x = (i % filas) * 150 + 50; //Posición en X
+						let y = Math.floor(i / filas) * 150; //Posición en Y
+						return `translate(${x + 30}, ${y + 50})` //retornamos la posicion correspondiente a cada personaje
+					})
+
+				// Transición de cada personaje
+				personaje
+					.transition("enter-personaje")
+					.duration(500)
+					.style("opacity", 1)
+
+				// Nombre de los personajes
+				personaje
+					.append("text")
+					.attr("dominant-baseline", "top")
+					.attr("text-anchor", "middle")
+					.text(d => d.personaje)
+
+				// Brazo derecho del personaje
+				personaje
+					.append("ellipse")
+					.attr("cx", 20)
+					.attr("cy", 55)
+					.attr("rx", d => largoBrazo(d.poder_minimo) / 10)
+					.attr("ry", 3)
+					.attr("fill", "#2644f3")
+					.attr("transform", "rotate(45, 20, 55)")
+
+				// Cuadrado para tapar el sobrante edl brazo
+				personaje
+					.append("rect")
+					.attr("x", -10)
+					.attr("y", 20)
+					.attr("width", 30)
+					.attr("height", 30)
+					.attr("fill", "#ffac8c")
+
+				// Cabeza de los personajes
+				personaje
+					.append("circle")
+					.attr("cx", 0)
+					.attr("cy", 30)
+					.attr("r", 10)
+					.attr("fill", (d) => {
+						if (d.primera_serie == "Dragon Ball") {
+							return "#fad763"
+						} else if (d.primera_serie == "Dragon Ball GT") {
+							return "#db4f4b"
+						} else if (d.primera_serie == "Dragon Ball Z") {
+							return "#8dff83"
+						}
+					})
+
+				// Cuerpo superior de los personajes
+				personaje
+					.append("circle")
+					.attr("cx", 0)
+					.attr("cy", 60)
+					.attr("r", 20)
+					.attr("fill", (d) => {
+						if (d.serie_recurrente == "Dragon Ball") {
+							return "#fad763"
+						} else if (d.serie_recurrente == "Dragon Ball GT") {
+							return "#db4f4b"
+						} else if (d.serie_recurrente == "Dragon Ball Z") {
+							return "#8dff83"
+						}
+					})
+
+				// Cuerpo inferior de los personajes
+				personaje
+					.append("rect")
+					.attr("x", -20)
+					.attr("y", 60)
+					.attr("width", 40)
+					.attr("height", d => largoCuerpo(d.poder_promedio))
+					.attr("fill", d => colorCuerpo(d.aventuras))
+
+				// Implementación del tooltip para cada uno
+				personaje
+					.on("mouseover", (event, d) => {
+						// Mostrar el tooltip
+						tooltip
+							.html(`Nombre: ${d.personaje} <br>Aventuras: ${d.aventuras} 
+							<br>Poder aumenta: ${d.poder_aumenta} <br>Poder mínimo: ${d.poder_minimo}
+							<br>Poder promedio: ${d.poder_promedio}<br> Poder Máximo: ${d.poder_maximo}
+							<br> Primera Serie: ${d.primera_serie}<br>Serie recurrente: ${d.serie_recurrente} <br>`)
+							.style("opacity", 1)
+							.style("left", (event.pageX + 10) + "px")
+							.style("top", (event.pageY - 28) + "px");
+					}).on("mouseout", (event, d) => {
+						// cuando el mouse sale del rect, desaparece tooltip
+						tooltip.style("opacity", 0);
+					})
+
+				/*// Cambio de opacidad
+				personaje
+					.on("mouseenter", (_, d) => {
+						contenedorVis2
+							.selectAll("g.personaje")
+							// nos quedamos con el glifo al cual el mouse entró
+							.filter(dato => dato.id == d.id)
+							// Hacemos la transición para que se esconda el glifo
+							.transition("escoder_personajes")
+							.duration(500)
+							.style("opacity", 0.1)
+					})
+					// Al salir del mouse, dejamos el glifo como estaba antes
+					.on("mouseleave", (_, d) => {
+						contenedorVis2
+							.selectAll("g.personaje")
+							.filter(dato => dato.id == d.id)
+							.transition("aparecer_personajes")
+							.duration(500)
+							.style("opacity", 1) 
+					})
+					*/
+				return personaje;
+			},
+			update => {
+				update
+					.transition("update_personaje")
+					.duration(500)
+					.attr("transform", (_, i) => {
+						let x = (i % filas) * 150 + 50;
+						let y = Math.floor(i / filas) * 150;
+						return `translate(${x + 30}, ${y + 50})`
+					})
+				return update
+			},
+			exit => {
+				exit.attr("class", "delete")
+
+				exit
+				  .transition("exit_personaje")
+					.duration(500)
+					.style("opacity", 0)
+					.attr("transform", (_, i) => {
+						let x = (i % filas) * 150 + 50;
+						let y = Math.floor(i / filas) * 150;
+						return `translate(${x + 30}, ${y + 50}) scale(5)`
+					})
+				exit.transition("eliminar").delay(500).remove();
+			}
+		)
+	return personajes;
 }
 
 

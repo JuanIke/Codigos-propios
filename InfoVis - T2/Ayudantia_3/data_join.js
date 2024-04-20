@@ -385,7 +385,7 @@ function cargarVis2(datos) {
   datos = d3.sort(datos, d=> sortBy == "date" ? d.fecha : d.lugar)
   // Lo anterior equivale a:
   // if (sortBy == "date")
-  //   datos = d3.sort(datos, d=> d.fecha)
+  //   datos = d3.sort(datos, d=> d.fecha) 
   // else
   //   datos = d3.sort(datos, d=> d.lugar)
 
